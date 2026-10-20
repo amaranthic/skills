@@ -9,6 +9,7 @@ A curated collection of modular, plug-and-play skills for autonomous AI agents, 
 | Skill | Description | Location |
 | :--- | :--- | :--- |
 | **`agent-context`** | Manages persistent agent session state, user invariants, and error ledgers across sessions without token bloat. | [`skills/agent-context`](./skills/agent-context) |
+| **`agent-behavior`** | Governs collaborative agent execution: shared mental models, proactive alignment, cognitive transparency, and self-verification. | [`skills/agent-behavior`](./skills/agent-behavior) |
 
 ---
 

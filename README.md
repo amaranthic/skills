@@ -8,7 +8,7 @@ A curated collection of modular, plug-and-play skills for autonomous AI agents, 
 
 | Skill | Description | Location |
 | :--- | :--- | :--- |
-| **`agent-context`** | Serializes runtime state, user directives, code styles, and error ledgers into a structured `context.md` for seamless handoffs across agent sessions. | [`skills/agent-context`](./skills/agent-context) |
+| **`agent-context`** | Manages persistent agent session state, user invariants, and error ledgers across sessions without token bloat. | [`skills/agent-context`](./skills/agent-context) |
 
 ---
 

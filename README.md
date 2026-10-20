@@ -1,5 +1,7 @@
 # Agent Skills
 
+[![skills.sh](https://skills.sh/b/amaranthic/skills)](https://skills.sh/amaranthic/skills)
+
 A curated collection of modular, plug-and-play skills for autonomous AI agents, terminal assistants, and LLM workflows following the [Agent Skills](https://agentskills.io) specification.
 
 ---

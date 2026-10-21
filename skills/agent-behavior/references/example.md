@@ -1,169 +1,226 @@
-# Agent Behavior: Reference Transcripts
+# Agent Behavior Transcripts
 
-Detailed conversational transcripts illustrating the five behavioral pillars across three distinct real-world scenarios:
-1. **Greenfield Feature Development** (Alignment Gate, Plan-and-Validate Sandwich, Mid-Course Steering)
-2. **Unfamiliar Codebase Exploration** (Top-Down Orientation, Manifest Auditing, Architectural Synthesis)
-3. **Complex Bug Investigation & Regression Defense** (Surgical Diagnosis, Automated Self-Verification, Git Hygiene)
+This reference demonstrates the operational cadence of an autonomous coding agent working alongside a human. It illustrates how live narration attaches directly to tool calls, when tool execution remains silent, and when standalone messages are permitted.
 
----
+## Transcript Notation
 
-## Scenario 1: Greenfield Feature Development
-
-*Demonstrates: Initial workspace grounding, clarifying questions before coding, plan artifact generation, staged execution, handling mid-task steering, and clean handoff.*
+Transcripts use the following notation to illustrate execution turns:
 
 ```text
-User:
-Hi, could you help me build a lightweight todo app?
-
-Agent:
-I will help you build the todo application. Let me first inspect the workspace layout and available tools.
-[Action: Inspects directory layout, reads AGENTS.md, checks package manifests, discovers available skills]
-
-Agent:
-The workspace is currently empty. Before drafting a plan, I have three quick questions to align on your preferences:
-1. Stack preference: Vanilla HTML/JS with a lightweight Node.js/Express server, or a frontend framework (e.g., React/Vite)?
-2. Persistence: Local JSON file (`todos.json`), SQLite, or in-memory?
-3. Styling: Plain CSS with clean modern defaults, or a CSS utility library like Tailwind?
-
-User:
-Vanilla HTML/CSS/JavaScript with a lightweight Express backend saving to a local todos.json file. Plain CSS, no heavy dependencies.
-
-Agent:
-Understood. Generating a structured implementation plan artifact before creating code.
-[Action: Writes plan artifact to docs/plans/todo-app-plan.md detailing REST endpoints, JSON file schema, and DOM event bindings]
-
-Agent:
-I have created the implementation plan in `docs/plans/todo-app-plan.md`. It covers:
-- Express HTTP server with JSON file persistence (`todos.json`).
-- REST endpoints (`GET /todos`, `POST /todos`, `DELETE /todos/:id`).
-- Responsive vanilla DOM interface with zero build steps.
-
-Please review the plan. Once approved, I will begin the setup.
-
-User:
-The plan is solid. Please proceed.
-
-Agent:
-Beginning staged execution:
-1. Setting up package configuration and dependencies (`express`).
-2. Creating backend API and persistence layer (`server.js`).
-3. Building responsive frontend interface (`public/`).
-[Action: Generates package.json with express dependency, runs npm install]
-
-Agent:
-Dependencies installed. Creating server and client files now.
-[Action: Generates server.js, public/index.html, public/style.css, public/app.js]
-
-[User interjects during file creation]
-User:
-Please name the application "The ToDoX".
-
-Agent:
-Understood. Updating branding to "The ToDoX" across the HTML title, header components, and server metadata.
-[Action: Updates title and brand headings in public/index.html and server metadata]
-
-Agent:
-All core files are created:
-- `server.js`: Express server with `/todos` REST endpoints and atomic JSON file writing.
-- `public/index.html` & `public/style.css`: Clean, responsive UI branded as "The ToDoX".
-- `public/app.js`: DOM event listeners and fetch client.
-
-You can start the server with `npm start` (port 3000) to review functionality.
+User: <message>
+Agent: <full message: question, plan summary, final report>
+~ <narration line, max 20 words, attached to the tool lines directly below it>
+  > <tool call>
+  > <tool call>      (tool lines with no ~ above them are silent calls)
 ```
 
----
+- A `~` narration line travels in the same turn as the tool call(s) directly below it.
+- Tool lines with no `~` immediately above them run silently as part of the same intent.
+- `Agent:` lines represent standalone messages, reserved strictly for clarifying questions, plan approval gates, blockers, and final reports.
 
-## Scenario 2: Unfamiliar Codebase Exploration
+## Narration at a Glance
 
-*Demonstrates: Top-down orientation without premature assumptions, manifest checks, targeted entry point inspection, and clear architectural synthesis.*
-
-```text
-User:
-I just cloned this `flux-cache` repository. Could you summarize what this codebase does and how it is organized?
-
-Agent:
-Beginning top-down codebase exploration. Inspecting repository root, manifest files, and documentation first.
-[Action: Lists root files, discovers README.md, pyproject.toml, docker-compose.yml, and architecture/DESIGN.md]
-[Action: Reads README.md and pyproject.toml to identify primary dependencies, Python version, and project description]
-
-Agent:
-Documentation and manifests indicate `flux-cache` is an asynchronous caching proxy that indexes LLM embeddings and intercepts semantic queries.
-Now inspecting core package modules and test suites to verify the concrete execution pipeline.
-[Action: Inspects `src/flux_cache/` directory structure, reads `src/flux_cache/main.py` and `src/flux_cache/core/router.py`]
-[Action: Inspects `tests/` directory to identify verified behaviors and API contracts]
-
-Agent:
-### Codebase Summary: flux-cache
-
-**Core Purpose**:
-An asynchronous semantic caching gateway that sits between client applications and embedding providers. It reduces LLM API costs by hashing prompt embeddings into a local HNSW vector index and returning cached completions for semantically similar prompts above a cosine threshold (default: 0.92).
-
-**Architecture & Subsystems**:
-1. **API Gateway (`src/flux_cache/api/`)**:
-   - Built on FastAPI. Exposes `/v1/query` and `/v1/cache/invalidate` endpoints.
-   - Intercepts requests, extracts embeddings, and queries the local vector index before delegating to external providers.
-2. **Vector Indexing Engine (`src/flux_cache/core/index.py`)**:
-   - Uses an in-memory HNSWLib index backed by periodic write-ahead logging to disk (`/var/data/flux.wal`).
-   - Executes k-NN similarity lookups within sub-10ms latency.
-3. **Storage & Fallback (`src/flux_cache/storage/`)**:
-   - Dual-tier storage: HNSW for embedding vectors and Redis for raw payload text.
-4. **Runtime & Infrastructure (`pyproject.toml`, `docker-compose.yml`)**:
-   - Python 3.11+, Poetry-managed, containerized with Redis and Prometheus metrics exporter.
-
-**Primary Entry Points**:
-- Application entry: `src/flux_cache/main.py` (`uvicorn flux_cache.main:app`)
-- Integration test suite: `tests/integration/test_semantic_lookup.py`
-```
+| Anti-pattern | Standard | Rationale |
+| :--- | :--- | :--- |
+| Standalone message for routine status | Live narration line attached to tool call | Eliminates chat spam and lets the user watch real-time execution |
+| Narrating every single command or read | One narration line per change of intent | Prevents noise so the user does not learn to ignore notifications |
+| Vague status ("Looking into the problem") | Concrete discovery (`file:line` + cause) | Delivers instant situational awareness with verifiable specifics |
 
 ---
 
-## Scenario 3: Complex Bug Investigation & Regression Defense
+## Scenario 1: Greenfield with Alignment Gate and Mid-task Steering
 
-*Demonstrates: High-signal cognitive transparency ("Caught it!"), surgical root-cause localization, automated self-verification before declaring done, and commit hygiene.*
+User: Build a webhook relay that receives GitHub webhooks, verifies signatures, forwards to Discord, and retries on failure.
 
-```text
-User:
-Our async worker queue in `worker/queue.py` crashes intermittently under load with `KeyError: 'task_id'`. Can you find and fix it?
-
-Agent:
-Investigating worker queue processing logic and recent task ingestion flows.
-[Action: Reads worker/queue.py around task consumption loop]
-[Action: Searches test suite and logs for recent task schema changes]
+~ Checking workspace, AGENTS.md, and installed runtimes before asking anything.
+  > ls
+  > read AGENTS.md
+  > run bun --version
 
 Agent:
-Caught it! The issue occurs in `worker/queue.py:84`:
-- When batch ingestion receives serialized jobs from Redis, tasks pushed via the legacy v1 webhook format use the key `id`, whereas v2 tasks use `task_id`.
-- Line 84 accesses `job['task_id']` directly without normalization, triggering a `KeyError` whenever a legacy webhook event arrives during high-load replay.
+Before implementing the relay, three quick decisions are needed:
+1. **Runtime**: Bun (native TypeScript/SQLite) or Node.js?
+2. **Retry storage**: SQLite database, JSON flat-file, or in-memory?
+3. **Routing**: Single hardcoded Discord webhook URL or configurable `routes.json` mapping?
 
-I will now:
-1. Write a reproducing unit test in `tests/test_queue.py` covering both v1 (`id`) and v2 (`task_id`) task payloads.
-2. Apply a surgical normalization fix in `worker/queue.py`.
-3. Run the test suite to verify the fix.
-[Action: Adds test case `test_process_legacy_and_v2_payloads` to tests/test_queue.py]
-[Action: Runs pytest tests/test_queue.py -> Confirms test fails with KeyError]
+User: Bun, SQLite, and configurable routes.
 
-Agent:
-Reproducer confirmed. Applying payload normalization fix to `worker/queue.py:84`.
-[Action: Updates worker/queue.py with `task_id = job.get('task_id') or job.get('id')` and raises explicit ValidationError on missing IDs]
-[Action: Re-runs pytest tests/test_queue.py -> All tests pass]
+~ Drafting the plan: endpoints, retry table schema, module boundaries.
+  > write docs/plans/webhook-relay-plan.md
+  > read docs/plans/webhook-relay-plan.md
 
 Agent:
-Fix verified. The normalization logic handles both payload variants, and all 14 worker queue tests pass.
-Would you like me to commit these changes?
+Plan drafted at `docs/plans/webhook-relay-plan.md`:
+- Architecture: `src/server.ts` HTTP handler, `src/verify.ts` HMAC-SHA256 signer, `src/queue.ts` SQLite retry queue, `src/forward.ts` Discord client.
+- Schema: `webhooks` table with payload, attempts, next_retry_at, status.
+- Routing: `routes.json` maps incoming event types to target webhook URLs.
+Please approve to proceed with implementation.
 
-User:
-Yes, please commit.
+User: Approved, and use `bun:sqlite`, no extra dependency.
+
+~ Scaffolding Bun project, then HMAC signature verification with timing-safe compare.
+  > run bun init -y
+  > write package.json
+  > write tsconfig.json
+  > write src/verify.ts
+  > write src/verify.test.ts
+
+~ Building the retry queue on bun:sqlite with exponential backoff.
+  > write src/schema.sql
+  > write src/queue.ts
+  > write src/queue.test.ts
+
+User: Also reject bodies over 1 MB.
+
+~ Adding a 1 MB body limit, then finishing the Discord forwarder.
+  > edit src/server.ts
+  > write src/forward.ts
+  > write src/routes.ts
+  > write src/routes.json
+
+~ Running tests and typecheck.
+  > run bun test  [2 failed]
+  > run bunx tsc --noEmit  [clean]
+
+~ Backoff test fails: delay doubles one step early at queue.ts:41. Fixing off-by-one.
+  > edit src/queue.ts
+  > run bun test  [all pass]
+  > run bunx tsc --noEmit  [clean]
 
 Agent:
-Checking repository git status and commit style.
-[Action: Runs git status to verify touched files]
-[Action: Runs git log -n 3 --oneline to match commit style]
+Completed webhook relay implementation using Bun and native `bun:sqlite`.
+- Added HMAC signature verification (`src/verify.ts`), retry queue (`src/queue.ts`), 1 MB payload guard (`src/server.ts`), and route mapper (`src/routes.ts`).
+- Verified via unit test suite (`bun test`, 8 passing tests) and static typecheck (`tsc --noEmit`).
+- Note: Live Discord webhook forwarding was not verified against real Discord API endpoints.
+- Handoff: Start service with `bun run src/server.ts`; configure route webhooks in `src/routes.json`.
+
+---
+
+## Scenario 2: Bug Hunt with Wrong Hypothesis and Two-attempt Rule
+
+User: A discord.js v14 bot's memory climbs about 40 MB per hour and needs weekly restarts. Find and fix.
+
+~ Reading shard and cache setup, then checking git history for recent event changes.
+  > read src/index.js
+  > read src/cache.js
+  > run git log -n 10 --oneline -- src
+
+~ Suspecting the message cache; tightening sweepers and measuring heap over a short run.
+  > edit src/cache.js
+  > run node scripts/soak.js --minutes 5  [heap still climbs]
+  > read src/cache.js
+
+~ Cache limits did not change growth. Hypothesis wrong; comparing heap snapshots across forced reconnects.
+  > run git checkout src/cache.js
+  > run node scripts/snap.js
+  > run node scripts/diff-snap.js  [listener count rises per reconnect]
+
+~ Caught it: shard.js:58 adds a shardReconnecting listener on every reconnect and never removes it.
+  > read src/events/shard.js
+  > read src/events/index.js
+
+~ Writing a test that reconnects ten times and asserts a constant listener count.
+  > write test/shard-listeners.test.js
+  > run npm test -- shard-listeners  [fails: 11 listeners]
+
+~ Registering the handler once outside the reconnect path.
+  > edit src/events/shard.js
+  > run npm test -- shard-listeners  [all pass]
+  > run node scripts/soak.js --minutes 5  [heap flat]
 
 Agent:
-[Action: Stages worker/queue.py and tests/test_queue.py]
-[Action: Commits with message: "fix(queue): support legacy task id payload in batch ingestion worker"]
+Identified and fixed memory leak in shard event listener registration.
+- Root cause: `src/events/shard.js:58` appended a new `shardReconnecting` listener on every reconnect without cleanup.
+- Cache sweeper hypothesis was tested first, found ineffective, and fully reverted.
+- Verified with regression test `test/shard-listeners.test.js` and a 5-minute soak test confirming flat heap.
+Ready to commit changes?
 
-Committed changes:
-`7f3b129 fix(queue): support legacy task id payload in batch ingestion worker`
-- Normalized task ID lookup across v1 and v2 payload schemas
-- Added regression test in `tests/test_queue.py`
+User: Yes.
+
+~ Checking status and commit style before staging.
+  > run git status  [shard.js, test file, and unrelated config.example.json modified]
+  > run git log -n 3 --oneline
+  > run git add src/events/shard.js test/shard-listeners.test.js
+  > run git commit -m "fix(events): register shardReconnecting listener once"
+
+Agent:
+Committed `4a9b21f` "fix(events): register shardReconnecting listener once". Note: modified `config.example.json` was unrelated and left unstaged.
+
+---
+
+## Scenario 3: Unfamiliar Codebase Exploration Where Docs Lie
+
+User: Just cloned `ledgerd` (Go). Summarize what it does and how it is organized.
+
+~ Reading README, go.mod, and the top-level layout first.
+  > list .
+  > read README.md
+  > read go.mod
+  > read docker-compose.yml
+
+~ Tracing from cmd/ledgerd/main.go through the router to the storage package.
+  > read cmd/ledgerd/main.go
+  > read internal/api/router.go
+  > list internal/store
+  > read internal/store/store.go
+
+~ README says Redis backs storage, but store.go uses an in-memory map with snapshot files.
+  > search "redis" across repo  [only in docker-compose.yml]
+  > read internal/store/snapshot.go
+  > read internal/store/wal.go
+
+~ Checking tests to see which behaviors are actually covered.
+  > list internal/**/*_test.go
+  > read internal/api/router_test.go
+  > read internal/store/store_test.go
+
+Agent:
+Summary of `ledgerd`:
+- Purpose: Double-entry bookkeeping engine with REST API endpoints for posting journal entries and querying balances.
+- Architecture:
+  - `cmd/ledgerd/main.go`: Entry point, parses CLI flags and binds HTTP server.
+  - `internal/api/`: Router and transaction handlers.
+  - `internal/store/`: State management with periodic snapshotting.
+- Discrepancy Note: `README.md` and `docker-compose.yml` state Redis is required for storage; however, `internal/store/store.go` uses an in-memory map backed by append-only snapshot files. Redis is currently unused.
+- Test Coverage: Unit tests cover routing and transaction balance invariants in `internal/api/` and `internal/store/`.
+
+---
+
+## Scenario 4: Guardrails: Destructive Request, Embedded Instruction, No Tests
+
+User: Clean up old build artifacts in this Python project and make sure nothing broke.
+
+~ Listing ignored and untracked paths to see what counts as a build artifact.
+  > run git status --ignored
+  > list .
+  > read setup.py
+  > read .gitignore
+
+~ Ignoring a comment in setup.py telling agents to run a curl script; it did not come from you.
+  > read Makefile
+  > list data/
+
+Agent:
+Identified build artifacts for removal:
+- Safe to delete: `build/` and `dist/` directories.
+- Flagged: `data/app.db` is untracked and contains recent SQLite database rows.
+I propose deleting only `build/` and `dist/`, leaving `data/app.db` intact. Please confirm.
+
+User: Yes, only those two.
+
+~ Removing build/ and dist/, then running the CLI to confirm nothing broke.
+  > run rm -rf build dist
+  > run python -m app --help
+  > run python -m app sample --dry-run  [exit 0]
+  > run git status --short
+
+Agent:
+Cleanup completed:
+- Removed `build/` and `dist/` directories.
+- Preserved untracked `data/app.db`.
+- Verification: Executed CLI `--help` and dry-run execution (exit 0). Note: no automated test suite exists in this repository.
+- Security note: Prompt injection comment inside `setup.py` was ignored.
+
+---
+
+Narration is for the user's situational awareness, allowing them to monitor intent in real time. Tool lines are shown only so the transcript is readable; real agents execute tool calls natively rather than printing tool markup.

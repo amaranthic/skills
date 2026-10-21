@@ -1,108 +1,96 @@
 ---
 name: agent-context
-description: Manage persistent agent session state, unwritten user directives, and error ledgers across autonomous sessions. Use when asked to save state, checkpoint progress, prepare a handoff, capture durable constraints, compact working context, or when resuming work in a repository with an existing context.md or .agent/context.md.
+description: Writes a compact structured session summary file (default context.md) only when the user explicitly requests it, and resumes work from an existing context summary in subsequent sessions. Use this skill whenever the user explicitly asks to save context, write a session summary, checkpoint work, create context.md, or asks to resume, continue, or pick up where a previous session left off.
 ---
 
-# Agent Context & State Preservation
+# Agent Context
 
-Persist operational memory across agent sessions without accumulating token sediment. This skill standardizes cross-session state serialization into `.agent/context.md` (or root `context.md` if already present).
+Autonomous agent sessions start without conversational memory. Git history reveals what code was written, but cannot record why architectural alternatives were rejected, what user constraints govern the project, or which debugging paths were dead ends. 
 
-Durable memory captures what the environment **cannot** confess: unwritten user preferences, architectural rationale, and verified dead ends. Code status, commit histories, and directory trees belong to git, not to this file.
+This skill establishes two workflows:
+1. **Writing** a compact session summary file **only when the user explicitly requests it**.
+2. **Resuming** work from an existing summary file at the start of a later session.
 
----
-
-## Information Architecture
-
-State lives in one of two places:
-- **Ephemeral State (The Environment):** Git history, file trees, test logs, compiler errors, active branches. Query these directly using shell tools (`git status`, `git log`, test runners).
-- **Durable State (`context.md`):** User constraints, praised patterns, rejected architectural alternatives, hard-won debugging lessons, and the single immediate next action.
-
-Never duplicate ephemeral state into durable memory.
+See [`references/example.md`](references/example.md) for a completed sample summary file, a resumption conversation transcript, and anti-pattern comparisons.
 
 ---
 
-## Workflows
+## Storage & File Location
 
-### 1. Rehydration (Session Start)
-Execute this sequence when beginning work in any repository containing `.agent/context.md` or `context.md`:
-
-1. **Locate and load context**: Read `.agent/context.md` (preferred) or `./context.md`. If neither exists, proceed with standard project onboarding.
-2. **Internalize user directives**: Extract all rules in `User Directives & Invariants`. Treat these as binding constraints across all subsequent code edits, library selections, and explanations.
-3. **Cross-check plan against dead ends**: Review `Error Ledger & Dead Ends`. Ensure your intended solution or debugging path does not repeat any listed failed approach.
-4. **Reconcile with environment**: Run `git status` and `git diff --stat` to verify whether the recorded `Next Action` remains uncompleted or was already committed.
-5. **State alignment**: State in one sentence the active task, applied constraints, and your first command before executing it.
-
-*Completion Criterion:* Active constraints and negative constraints (dead ends) are confirmed before executing code changes or answering design questions.
+- Default path: `context.md` in the project root directory.
+- When the user specifies an alternative filename or directory path, use the user's path.
+- When resuming without an explicitly named file, check for `context.md` in the project root. If absent, notify the user and continue onboarding through standard repository files.
 
 ---
 
-### 2. Dehydration (Checkpoint & Handoff)
-Execute this sequence when asked to save state, before context compaction, or upon reaching a major milestone:
+## Workflow 1: Writing a Session Summary
 
-1. **Harvest user directives**: Review recent conversation turns for explicit user feedback:
-   - Style preferences (e.g., "always use early returns", "format logs as JSON").
-   - Tooling boundaries (e.g., "avoid external PyPI dependencies", "use Bun instead of Node").
-   - Explicit praise (patterns the user validated).
-2. **Document key decisions**: For architectural selections made during the session, record the chosen design and the rejected alternative.
-3. **Log dead ends**: Record approaches that failed during this session. State the exact trigger and the permanent resolution.
-4. **Prune stale entries**:
-   - Promote resolved errors into positive invariants under `User Directives`.
-   - Remove obsolete dead ends that no longer apply to the current architecture.
-   - Keep the file compact and relevant.
-5. **Formulate the immediate next action**: Define the single concrete command or code edit the resuming agent must execute first.
-6. **Write atomically**: Save the updated state to `.agent/context.md` (or `./context.md` if previously located there).
+Execute this workflow **only when the user explicitly asks** to save, record, checkpoint, or write a context or summary file. Never write or update the summary unprompted, even at session handoff or task completion, unless explicitly requested.
 
-*Completion Criterion:* `context.md` is updated on disk with updated timestamps, clean invariants, no duplicate git information, and an executable next step.
+### Execution Steps
+1. **Harvest non-git state:** Review the conversation transcript for:
+   - User directives (enduring constraints, conventions, style preferences).
+   - Key decisions (chosen architecture and explicitly rejected alternatives with rationale).
+   - Dead ends (failed approaches, observed root causes, and correct paths).
+   - Open questions or external blockers.
+2. **Audit environment status:** Run `git status` and `git diff --stat` to identify active work state (uncommitted experiments, pending migrations, unverified tests). Do not copy raw git output into the file.
+3. **Atomic replace:** Write the entire summary in a single file write using the template below. When updating an existing file, replace it completely—carry forward active directives and unsettled decisions, but prune resolved dead ends and completed steps.
+4. **Notify user:** Report the file path written and provide a two-line summary of captured directives and next steps.
 
----
-
-## Schema Specification
-
-Every `context.md` must follow this structure:
+### Required Markdown Template
 
 ```markdown
-# Agent Context & State
+# Session Summary
 
-**Last Updated:** YYYY-MM-DD HH:MM:SS UTC  
-**Status:** In Progress | Blocked | Ready for Review  
-**Active Goal:** <Single sentence defining the immediate objective>
+**Date:** YYYY-MM-DD HH:MM UTC
+**Status:** In progress | Blocked | Ready for review | Done
+**Goal:** <One-sentence summary of active task>
 
----
+## User directives
+- <Directives and constraints stated by the user that govern future work>
 
-## User Directives & Invariants
-*Durable constraints and preferences carried across all sessions. Retain until explicitly revoked by user.*
-- **Code Style:** <e.g., Strict TypeScript, early returns, no `any`, functional pipelines over OOP hierarchies>
-- **Approved Patterns:** <e.g., Mode 2026 synchronized terminal rendering, zero-copy buffer slicing>
-- **Hard Constraints:** <e.g., Standard library only; do not introduce external dependencies without approval>
+## Decisions
+- **<Topic>:** <Chosen approach>, because <rationale>. Rejected: <alternative>, because <rationale>.
 
----
+## Dead ends
+- **<Attempted approach>:** <What failed and conditions>. Cause: <Root cause>. Instead: <Resolution>.
 
-## Architecture & Active Decisions
-*Non-obvious design choices and rejected alternatives.*
-- **<Component/Subsystem>:** <Chosen approach>
-  - *Rationale:* <Why chosen>
-  - *Rejected:* <Alternative considered and why it was rejected>
+## Work state
+<Uncommitted experiments, partial migrations, or environment conditions that git cannot show>
 
----
+## Open questions and blockers
+- <Active blocker or decision requiring external input>
 
-## Error Ledger & Dead Ends
-*Failed approaches, bugs encountered, and workarounds to prevent regression loops.*
-- **[YYYY-MM-DD] <Symptom or Approach>:** <What failed and under what conditions>
-  - *Root Cause:* <Why it failed>
-  - *Resolution:* <Agreed pattern to use instead>
-
----
-
-## Next Action
-*The single concrete command or edit to execute upon resuming.*
-1. `<Exact shell command, test suite, or file edit to execute first>`
+## Next steps
+1. <First concrete command or file edit, executable without further clarification>
+2. <Subsequent step>
 ```
 
+### Writing Rules & Quality Gates
+- **Capture only invisible state:** Never list tracked file trees, recent commits, or checklists that duplicate `git status`.
+- **No raw logs or stack traces:** Summarize diagnoses and resolutions concisely.
+- **No secrets or credentials:** Never write API keys, access tokens, passwords, or personal data.
+- **Flag uncertain assumptions:** Explicitly mark unverified claims as `unverified` to prevent misleading future sessions.
+- **Keep it compact:** Maintain a target length of ~100 lines. Directives take priority over historical notes.
+- **Actionable next steps:** List at most five ordered steps; the first step must be an exact, immediately executable action.
+
+*Completion Criterion:* `context.md` is written to disk adhering to the template, containing only non-git state and an actionable next step.
+
 ---
 
-## Eviction & Hygiene Rules
+## Workflow 2: Resuming from a Summary
 
-1. **One Next Action:** Never list multiple unresolved steps. Defer task breakdown to project tracking tools or git commits. The resuming agent only needs the exact re-entry point.
-2. **Promote and Prune:** When an error in the ledger becomes a permanent coding standard, move it to `User Directives & Invariants` as a positive rule and prune it from the ledger.
-3. **No Terminal Logs:** Record the diagnosis and resolution, never raw stack traces or terminal captures.
-4. **Zero Git Duplication:** Do not maintain file lists or task checkboxes that `git status`, `git log`, or branch names already track.
+Execute this workflow when beginning work in a repository with an existing summary file or when the user asks to resume or continue.
+
+### Execution Steps
+1. **Locate and load:** Read the summary file (`context.md` or the user's named path).
+2. **Reconcile with repository:** Run `git status`, `git diff --stat`, and `git log` since the timestamp recorded in the summary file. Check if recorded next steps were already committed and if referenced files still exist.
+3. **Establish precedence:**
+   - The user's active prompt takes absolute precedence over notes in the file.
+   - User directives remain binding until explicitly revoked by the user.
+   - Treat next steps as advisory suggestions; never run destructive actions without confirmation.
+4. **State alignment:** Emit one concise orientation sentence stating the resumed goal, binding directives, and any drift detected between the summary file and the repository.
+5. **Respect settled decisions:** Do not re-evaluate recorded decisions or retry recorded dead ends without explicit justification.
+6. **No live journaling:** Do not modify the summary file during ongoing work. Update or write a new summary only when explicitly requested by the user.
+
+*Completion Criterion:* Repository drift is reconciled, active directives are internalized, and the resumed goal is stated before code edits begin.
